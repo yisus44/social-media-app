@@ -10,13 +10,14 @@ ctrl.index = function (req, res) {};
 ctrl.create = function (req, res) {
   const saveImage = async () => {
     let imageUrl = randomText();
-    const images = Image.find({ filenamae: imageUrl });
+    const images = await Image.find({ filename: imageUrl });
     if (images.length > 0) {
       saveImage();
     }
     const imageTempPath = req.file.path;
     const ext = path.extname(req.file.originalname).toLowerCase();
     const targetPath = path.resolve(`src/public/upload/${imageUrl}${ext}`);
+
     const { title, description } = req.body;
     console.log(ext);
     try {
