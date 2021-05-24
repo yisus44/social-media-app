@@ -3,9 +3,19 @@ const ctrl = {};
 const { randomText } = require("../helpers/libs");
 const fs = require("fs-extra");
 
-const { Image } = require("../models/index");
+const md5 = require("md5");
 
-ctrl.index = function (req, res) {};
+const { Image, Comment } = require("../models/index");
+
+ctrl.index = async function (req, res) {
+  const image = await Image.findOne({
+    filename: { $regex: req.params.image_id },
+  }).lean({ virtuals: true });
+  const comments = await Comment.find({ image_id: image._id }).lean({
+    virtuals: true,
+  });
+  res.render("image", { image, comments });
+};
 
 ctrl.create = function (req, res) {
   const saveImage = async () => {
@@ -34,7 +44,7 @@ ctrl.create = function (req, res) {
           filename: imageUrl + ext,
         });
         const imageSaved = await newImg.save();
-        res.send("works");
+        res.redirect("/images/" + imageUrl);
       } else {
         await fs.unlink(imageTempPath);
         res.send({ error: "File not supported" }).status(500);
@@ -47,8 +57,21 @@ ctrl.create = function (req, res) {
   saveImage();
 };
 
+ctrl.comment = async function (req, res) {
+  const image = await Image.findOne({
+    filename: { $regex: req.params.image_id },
+  });
+  if (image) {
+    const newComment = new Comment(req.body);
+    newComment.gravatar = md5(newComment.email);
+    newComment.image_id = image._id;
+    await newComment.save();
+    res.redirect("/images/" + image.uniqueId);
+  }
+
+  res.send("comment");
+};
 ctrl.like = function (req, res) {};
-ctrl.comment = function (req, res) {};
 ctrl.delete = function (req, res) {};
 
 module.exports = ctrl;
