@@ -21,4 +21,12 @@ const CommentSchema = new Schema({
   image_id: { type: ObjectId },
 });
 
+CommentSchema.virtual("image")
+  .set(function (image) {
+    this._image = image;
+  })
+  .get(function () {
+    return this._image;
+  });
+
 module.exports = model("Comment", CommentSchema);

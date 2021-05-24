@@ -2,7 +2,7 @@ const path = require("path");
 const ctrl = {};
 const { randomText } = require("../helpers/libs");
 const fs = require("fs-extra");
-
+const sidebar = require("../helpers/sidebar");
 const md5 = require("md5");
 
 const { Image, Comment } = require("../models/index");
@@ -12,7 +12,7 @@ ctrl.index = async function (req, res) {
     filename: { $regex: req.params.image_id },
   }).lean({ virtuals: true });
 
-  const viewModel = { image: {}, comments: {} };
+  let viewModel = { image: {}, comments: {} };
   //We converted the mongoose doc into a js object
   //so we dont have the save capacibilty to make views works
   //I know its O(n*m) so it will need somo refactoring...someday
@@ -28,6 +28,8 @@ ctrl.index = async function (req, res) {
     });
 
     viewModel.comments = comments;
+    viewModel = await sidebar(viewModel);
+    console.log(viewModel);
     res.render("image", viewModel);
   } else {
     res.redirect("/");
