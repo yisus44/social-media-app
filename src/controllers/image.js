@@ -11,10 +11,27 @@ ctrl.index = async function (req, res) {
   const image = await Image.findOne({
     filename: { $regex: req.params.image_id },
   }).lean({ virtuals: true });
-  const comments = await Comment.find({ image_id: image._id }).lean({
-    virtuals: true,
+
+  const viewModel = { image: {}, comments: {} };
+  //We converted the mongoose doc into a js object
+  //so we dont have the save capacibilty to make views works
+  //I know its O(n*m) so it will need somo refactoring...someday
+  const image2 = await Image.findOne({
+    filename: { $regex: req.params.image_id },
   });
-  res.render("image", { image, comments });
+  if (image) {
+    image2.views++;
+    await image2.save();
+    viewModel.image = image;
+    const comments = await Comment.find({ image_id: image._id }).lean({
+      virtuals: true,
+    });
+
+    viewModel.comments = comments;
+    res.render("image", viewModel);
+  } else {
+    res.redirect("/");
+  }
 };
 
 ctrl.create = function (req, res) {
@@ -67,11 +84,36 @@ ctrl.comment = async function (req, res) {
     newComment.image_id = image._id;
     await newComment.save();
     res.redirect("/images/" + image.uniqueId);
+  } else {
+    res.redirect("/");
   }
 
   res.send("comment");
 };
-ctrl.like = function (req, res) {};
-ctrl.delete = function (req, res) {};
+ctrl.like = async function (req, res) {
+  const image = await Image.findOne({
+    filename: { $regex: req.params.image_id },
+  });
+  if (image) {
+    image.likes++;
+    await image.save();
+    res.json({ likes: image.likes });
+  } else {
+    res.status(404).json({ error: "Internal error" });
+  }
+};
+ctrl.delete = async function (req, res) {
+  const image = await Image.findOne({
+    filename: { $regex: req.params.image_id },
+  });
+  if (image) {
+    await fs.unlink(path.resolve("./src/public/upload/" + image.filename));
+    await Comment.deleteOne({
+      image_id: image._id,
+    });
+    await image.remove();
+    res.json(true);
+  }
+};
 
 module.exports = ctrl;
